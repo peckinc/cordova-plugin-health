@@ -316,8 +316,12 @@ public class HealthPlugin extends CordovaPlugin {
                 nutritionscope = true;
         }
         dynPerms.clear();
-        if(locationscope) dynPerms.add(Manifest.permission.ACCESS_FINE_LOCATION);
-        if(bodyscope) dynPerms.add(Manifest.permission.BODY_SENSORS);
+
+        // peckinc, crashs my 5.0.1 phone
+//        if(locationscope)
+//            dynPerms.add(Manifest.permission.ACCESS_FINE_LOCATION);
+//        if(bodyscope)
+//            dynPerms.add(Manifest.permission.BODY_SENSORS);
 
         GoogleApiClient.Builder builder = new GoogleApiClient.Builder(this.cordova.getActivity());
         builder.addApi(Fitness.HISTORY_API);
