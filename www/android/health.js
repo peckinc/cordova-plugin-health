@@ -77,8 +77,16 @@ Health.prototype.queryAggregated = function (opts, onSuccess, onError) {
     if(typeof opts.endDate == 'object') opts.endDate = opts.endDate.getTime();
     exec(function(data){
       //reconvert the dates back to Date objects
-      data.startDate = new Date(data.startDate);
-      data.endDate = new Date(data.endDate);
+      if(Object.prototype.toString.call( data ) === '[object Array]'){
+        //it's an array
+        for(var i=0; i<data.length; i++){
+          data[i].startDate = new Date(data[i].startDate);
+          data[i].endDate = new Date(data[i].endDate);
+        }
+      } else {
+        data.startDate = new Date(data.startDate);
+        data.endDate = new Date(data.endDate);
+      }
       onSuccess(data);
     }, onError, "health", "queryAggregated", [opts]);
   }

@@ -1,3 +1,4 @@
+cordova.define("cordova-plugin-health.HealthKit", function(require, exports, module) {
 function HealthKit() {
 }
 
@@ -129,3 +130,5 @@ HealthKit.install = function() {
 };
 
 cordova.addConstructor(HealthKit.install);
+
+});

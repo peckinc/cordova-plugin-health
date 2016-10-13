@@ -137,22 +137,27 @@ Quirks of query()
 - in Google Fit calories.active is computed by subtracting the basal from the total, as basal an average of the a number of days before endDate is taken (the actual number is defined in a variable, currently set to 7)
 - while Google Fit calculates basal and active calories automatically, HealthKit needs an explicit input
 - when querying for activities, Google Fit is able to determine some activities automatically, while HealthKit only relies on the input of the user or of some external app
+- when querying for activities, calories and distance are also provided in HealthKit (units are kcal and metres) and never in Google Fit
+
 
 ### queryAggregated()
 
 Gets aggregated data in a certain time window.
+Usually the sum is returned for the given quantity.
 
 ```
 navigator.health.queryAggregated({
         startDate: new Date(new Date().getTime() - 3 * 24 * 60 * 60 * 1000), // three days ago
         endDate: new Date(), // now
-        dataType: 'steps'
+        dataType: 'steps',
+        bucket: 'day'
         }, successCallback, errorCallback)
 ```
 
 - startDate: {type: Date}, start date from which to get data
 - endDate: {type: Date}, end data to which to get the data
 - dataType: {type: String}, the data type to be queried (see below for supported data types)
+- bucket: {type: String}, if specified, aggregation is grouped an array of "buckets" (windows of time), supported values are: 'hour', 'day', 'week', 'month', 'year'
 - successCallback: {type: function(data)}, called if all OK, data contains the result of the query, see below for returned data types
 - errorCallback: {type: function(err)}, called if something went wrong, err contains a textual description of the problem
 
@@ -166,7 +171,7 @@ The following table shows what types are supported and examples of aggregated da
 | calories        | { startDate: Date, endDate: Date, value: 25698.1, unit: 'kcal' } |
 | calories.active | { startDate: Date, endDate: Date, value: 3547.4, unit: 'kcal' } |
 | calories.basal  | { startDate: Date, endDate: Date, value: 13146.1, unit: 'kcal' } |
-| activity        | { startDate: Date, endDate: Date, value: { still: { duration: 520000, calories: 30, distance: 0 }, walking: { duration: 223000, calories: 20, distance: 15 }}, unit: 'activitySummary' } (note: duration is expressed in milliseconds, distance in meters and calories in kcal) |
+| activity        | { startDate: Date, endDate: Date, value: { still: { duration: 520000, calories: 30, distance: 0 }, walking: { duration: 223000, calories: 20, distance: 15 }}, unit: 'activitySummary' } (note: duration is expressed in milliseconds, distance in metres and calories in kcal) |
 
 Quirks of queryAggregated()
 
@@ -237,7 +242,7 @@ short term
 long term
 
 - add registration to updates (in Fit:  HistoryApi#registerDataUpdateListener() )
-- store vital signs on an encrypted DB in the case of Android (possible choice: [sqlcipher](https://www.zetetic.net/sqlcipher/sqlcipher-for-android/))
+- store vital signs on an encrypted DB in the case of Android and remove custom datatypes (possible choice: [sqlcipher](https://www.zetetic.net/sqlcipher/sqlcipher-for-android/). The file would be stored on shared drive, and it would be shared among apps through a service. You could more simply share the file, but then how would you share the password? If shared through a service, all apps would have the same service because it's part of the plugin, so the service should not auto-start until the first app tries to bind it (see [this](http://stackoverflow.com/questions/31506177/the-same-android-service-instance-for-two-apps) for suggestions). This is sub-optimal, as all apps would have the same copy of the service (although lightweight). A better approach would be requiring an extra app, but this creates other issues like "who would publish it?", "why the user would be needed to download another app?" etc.
 - add also Samsung Health as a health record for Android
 
 ## Contributions
