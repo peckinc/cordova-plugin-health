@@ -258,15 +258,20 @@ public class HealthPlugin extends CordovaPlugin {
 
     private void isAvailable(final CallbackContext callbackContext){
         //first check that the Google APIs are available
-        GoogleApiAvailability gapi = GoogleApiAvailability.getInstance();
-        int apiresult = gapi.isGooglePlayServicesAvailable(this.cordova.getActivity());
+        final GoogleApiAvailability gapi = GoogleApiAvailability.getInstance();
+        final int apiresult = gapi.isGooglePlayServicesAvailable(this.cordova.getActivity());
         if(apiresult != ConnectionResult.SUCCESS){
             PluginResult result;
             result = new PluginResult(PluginResult.Status.OK, false);
             callbackContext.sendPluginResult(result);
-            if(gapi.isUserResolvableError(apiresult)){
+            if(gapi.isUserResolvableError(apiresult)) {
                 // show the dialog, but no action is performed afterwards
-                gapi.showErrorDialogFragment(this.cordova.getActivity(), apiresult, 1000);
+                final CordovaInterface cordovaX = this.cordova;
+                this.cordova.getActivity().runOnUiThread(new Runnable() {
+                    public void run() {
+                        gapi.showErrorDialogFragment(cordovaX.getActivity(), apiresult, 1000);
+                    }
+                });
             }
         } else {
             // check that Google Fit is actually installed
@@ -282,7 +287,7 @@ public class HealthPlugin extends CordovaPlugin {
                 //code from http://stackoverflow.com/questions/11753000/how-to-open-the-google-play-store-directly-from-my-android-application
 
                 try {
-                  cordova.getActivity().startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=com.google.android.apps.fitness")));
+                    cordova.getActivity().startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=com.google.android.apps.fitness")));
                 } catch (android.content.ActivityNotFoundException anfe) {
                     cordova.getActivity().startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("https://play.google.com/store/apps/details?id=com.google.android.apps.fitness")));
                 }
@@ -334,25 +339,25 @@ public class HealthPlugin extends CordovaPlugin {
         if(nutritionscope) builder.addScope(new Scope(Scopes.FITNESS_NUTRITION_READ_WRITE));
 
         builder.addConnectionCallbacks(new GoogleApiClient.ConnectionCallbacks() {
-                    @Override
-                    public void onConnected(Bundle bundle) {
-                        mClient.unregisterConnectionCallbacks(this);
-                        Log.i(TAG, "Google Fit connected");
-                        authReqSuccess();
-                    }
+            @Override
+            public void onConnected(Bundle bundle) {
+                mClient.unregisterConnectionCallbacks(this);
+                Log.i(TAG, "Google Fit connected");
+                authReqSuccess();
+            }
 
-                    @Override
-                    public void onConnectionSuspended(int i) {
-                        String message = "";
-                        if (i == GoogleApiClient.ConnectionCallbacks.CAUSE_NETWORK_LOST) {
-                            message = "connection lost, network lost";
-                        } else if (i == GoogleApiClient.ConnectionCallbacks.CAUSE_SERVICE_DISCONNECTED) {
-                            message = "connection lost, service disconnected";
-                        } else message = "connection lost, code: " + i;
-                        Log.e(TAG, message);
-                        callbackContext.error(message);
-                    }
-                });
+            @Override
+            public void onConnectionSuspended(int i) {
+                String message = "";
+                if (i == GoogleApiClient.ConnectionCallbacks.CAUSE_NETWORK_LOST) {
+                    message = "connection lost, network lost";
+                } else if (i == GoogleApiClient.ConnectionCallbacks.CAUSE_SERVICE_DISCONNECTED) {
+                    message = "connection lost, service disconnected";
+                } else message = "connection lost, code: " + i;
+                Log.e(TAG, message);
+                callbackContext.error(message);
+            }
+        });
 
         builder.addOnConnectionFailedListener(
                 new GoogleApiClient.OnConnectionFailedListener() {
@@ -452,14 +457,38 @@ public class HealthPlugin extends CordovaPlugin {
             JSONArray resultset = new JSONArray();
             List<DataSet> datasets = dataReadResult.getDataSets();
             for (DataSet dataset : datasets) {
+
+                if(dataset.getDataPoints().isEmpty()) {
+
+                    try {
+                        DataSource ds = new DataSource.Builder()
+                                .setAppPackageName("me.peck.PeckApp")
+                                .setDataType(DataType.TYPE_DISTANCE_DELTA)
+                                .setName("peck-starting-sample")
+                                .setType(DataSource.TYPE_RAW)
+                                .build();
+
+                        DataPoint dp = DataPoint.create(ds);
+                        dp.setTimestamp(new Date().getTime(), TimeUnit.MILLISECONDS);
+                        dp.getValue(Field.FIELD_DISTANCE).setFloat(100.0f);
+
+                        DataSet dset = DataSet.create(ds);
+                        dset.add(dp);
+                        dataset = dset;
+                    } catch (Throwable t) {
+                        System.out.println(t.getMessage());
+                    }
+
+                }
+
                 for (DataPoint datapoint : dataset.getDataPoints()) {
                     JSONObject obj = new JSONObject();
                     obj.put("startDate", datapoint.getStartTime(TimeUnit.MILLISECONDS));
                     obj.put("endDate", datapoint.getEndTime(TimeUnit.MILLISECONDS));
                     DataSource dataSource = datapoint.getOriginalDataSource();
                     if (dataSource != null) {
-						String sourceName = dataSource.getName();
-						obj.put("sourceName", sourceName);
+                        String sourceName = dataSource.getName();
+                        obj.put("sourceName", sourceName);
                         String sourceBundleId = dataSource.getAppPackageName();
                         obj.put("sourceBundleId", sourceBundleId);
                     }
@@ -737,8 +766,8 @@ public class HealthPlugin extends CordovaPlugin {
         }
         String sourceName = args.getJSONObject(0).getString("sourceName");
 
-		String sourceBundleId = cordova.getActivity().getApplicationContext().getPackageName();
-		if (args.getJSONObject(0).has("sourceBundleId")) {
+        String sourceBundleId = cordova.getActivity().getApplicationContext().getPackageName();
+        if (args.getJSONObject(0).has("sourceBundleId")) {
             sourceBundleId = args.getJSONObject(0).getString("sourceBundleId");
         }
 
