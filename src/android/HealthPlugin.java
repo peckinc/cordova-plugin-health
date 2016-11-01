@@ -101,6 +101,10 @@ public class HealthPlugin extends CordovaPlugin {
 
     public static Map<String, DataType> customdatatypes = new HashMap<String, DataType>();
 
+    boolean bodyscope = false;
+    boolean activityscope = false;
+    boolean locationscope = false;
+    boolean nutritionscope = false;
 
     public HealthPlugin() {
     }
@@ -195,11 +199,12 @@ public class HealthPlugin extends CordovaPlugin {
         if (requestCode == REQUEST_OAUTH) {
             if (resultCode == Activity.RESULT_OK) {
                 Log.i(TAG, "Got authorisation from Google Fit");
-                if (!mClient.isConnected() && !mClient.isConnecting()) {
-                    Log.d(TAG, "Re-trying connection with Fit");
-                    mClient.connect();
-                }
-                authReqCallbackCtx.success();
+                auth(authReqCallbackCtx);
+//                if (!mClient.isConnected() && !mClient.isConnecting()) {
+//                    Log.d(TAG, "Re-trying connection with Fit");
+//                    mClient.connect();
+//                }
+                //authReqCallbackCtx.success();
             } else if (resultCode == Activity.RESULT_CANCELED) {
                 // The user cancelled the login dialog before selecting any action.
                 authReqCallbackCtx.error("User cancelled the dialog");
@@ -308,10 +313,10 @@ public class HealthPlugin extends CordovaPlugin {
         authReqCallbackCtx = callbackContext;
 
         //reset scopes
-        boolean bodyscope = false;
-        boolean activityscope = false;
-        boolean locationscope = false;
-        boolean nutritionscope = false;
+        bodyscope = false;
+        activityscope = false;
+        locationscope = false;
+        nutritionscope = false;
 
         for (int i = 0; i < args.length(); i++) {
             String type = args.getString(i);
@@ -325,13 +330,20 @@ public class HealthPlugin extends CordovaPlugin {
                 nutritionscope = true;
         }
         dynPerms.clear();
+        if(locationscope)
+            dynPerms.add(Manifest.permission.ACCESS_FINE_LOCATION);
+        if(bodyscope)
+            dynPerms.add(Manifest.permission.BODY_SENSORS);
 
-        // peckinc, crashs my 5.0.1 phone
-//        if(locationscope)
-//            dynPerms.add(Manifest.permission.ACCESS_FINE_LOCATION);
-//        if(bodyscope)
-//            dynPerms.add(Manifest.permission.BODY_SENSORS);
+        // peckinc, crashs my 5.0.1 phone so lets clear these
+        dynPerms.clear();
 
+        auth(callbackContext);
+
+
+    }
+
+    private void auth(final CallbackContext callbackContext) {
         GoogleApiClient.Builder builder = new GoogleApiClient.Builder(this.cordova.getActivity());
         builder.addApi(Fitness.HISTORY_API);
         builder.addApi(Fitness.CONFIG_API);
@@ -448,7 +460,6 @@ public class HealthPlugin extends CordovaPlugin {
                 return;
             }
         }
-
 
         DataReadRequest readRequest = new DataReadRequest.Builder()
                 .setTimeRange(st, et, TimeUnit.MILLISECONDS)
